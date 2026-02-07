@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Observador AutoTag</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      
+      body {
+        font-family: 'Segoe UI', 'Apple Color Emoji', 'Segoe UI Emoji', Tahoma, Geneva, Verdana, sans-serif;
+        width: 400px;
+        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      }
+      
+      .container {
+        display: flex;
+        flex-direction: column;
+        padding: 6px 4px;
+        gap: 6px;
+      }
+      
+      .header {
+        text-align: center;
+        padding: 8px;
+        border-bottom: 2px solid #10b981;
+        background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+        border-radius: 6px;
+      }
+      
+      .header h2 {
+        font-size: 12px;
+        color: #fff;
+        margin-bottom: 2px;
+        background: linear-gradient(135deg, #fff 0%, #e5e7eb 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        font-weight: 700;
+      }
+      
+      .header p {
+        font-size: 10px;
+        color: #10b981;
+        font-weight: 500;
+      }
+      
+      .controls {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        flex: 1;
+        overflow: hidden;
+      }
+      
+      #pestanas-container {
+        flex: 1 !important;
+        min-height: 70px;
+        max-height: 450px;
+        display: grid !important;
+        grid-template-columns: 1fr !important;
+        gap: 4px !important;
+        overflow-y: auto !important;
+        padding: 4px !important;
+        background: transparent !important;
+        border: none !important;
+      }
+      
+      #pestanas-container::-webkit-scrollbar {
+        width: 6px;
+      }
+      
+      #pestanas-container::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      
+      #pestanas-container::-webkit-scrollbar-thumb {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        border-radius: 3px;
+      }
+      
+      #pestanas-container::-webkit-scrollbar-thumb:hover {
+        background: linear-gradient(135deg, #059669 0%, #047857 100%);
+      }
+      
+      .pestaña-card {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        padding: 5px 6px;
+        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+        border: 1px solid #10b981;
+        border-radius: 4px;
+        gap: 4px;
+        min-height: 60px;
+        transition: all 0.2s ease;
+      }
+      
+      .pestaña-card:hover {
+        border-color: #059669;
+        box-shadow: 0 2px 8px rgba(16, 185, 129, 0.12);
+        transform: translateY(-1px);
+      }
+      
+      .pestaña-info {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+      }
+      
+      .pestaña-titulo {
+        font-size: 10px;
+        color: #e2e8f0;
+        font-weight: 600;
+        line-height: 1.2;
+      }
+      
+      .pestaña-id {
+        font-size: 8px;
+        color: #94a3b8;
+        margin-top: 1px;
+      }
+      
+      button {
+        padding: 8px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: bold;
+        font-size: 11px;
+        color: white;
+        transition: all 0.3s;
+      }
+      
+      button:hover:not(:disabled) {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      }
+      
+      button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none;
+      }
+      
+      #observarChatsBtn {
+        background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+      }
+      
+      #observarChatsBtn:disabled {
+        background: linear-gradient(135deg, #cbd5e1 0%, #94a3b8 100%);
+        color: #475569;
+      }
+      
+      #observarChatsBtn.active {
+        background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+        box-shadow: 0 0 12px rgba(34, 197, 94, 0.5);
+      }
+      
+      #detenerChatsBtn {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+      }
+      
+      #detenerChatsBtn:disabled {
+        background: linear-gradient(135deg, #cbd5e1 0%, #94a3b8 100%);
+        color: #475569;
+      }
+      
+      #detenerChatsBtn.active {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        box-shadow: 0 0 12px rgba(239, 68, 68, 0.5);
+      }
+      
+      #mapeoBtn {
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        padding: 6px 10px;
+        font-size: 10px;
+      }
+
+      #nomenclaturaBtn {
+        background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+        padding: 6px 10px;
+        font-size: 10px;
+      }
+
+      #detenerTodasBtn {
+        background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+        padding: 6px 10px;
+        font-size: 10px;
+        grid-column: 1 / -1;
+      }
+
+      #detenerTodasBtn:hover {
+        background: linear-gradient(135deg, #991b1b 0%, #7f1d1d 100%);
+      }
+
+      .mapeos-section {
+        display: none;
+        padding: 12px;
+        background: #0f172a;
+        border-radius: 6px;
+        border: 1px solid #334155;
+        flex-direction: column;
+        gap: 10px;
+        max-height: 450px;
+      }
+
+      .mapeos-section.visible {
+        display: flex;
+      }
+
+      .mapeos-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid #334155;
+        padding-bottom: 8px;
+      }
+
+      .mapeos-header h3 {
+        color: #e2e8f0;
+        font-size: 12px;
+        margin: 0;
+      }
+
+      .mapeos-header button {
+        padding: 4px 8px;
+        font-size: 9px;
+        background: #334155;
+      }
+
+      .mapeos-list {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        overflow-y: auto;
+        max-height: 180px;
+      }
+
+      .mapeo-item {
+        padding: 8px;
+        background: #1e293b;
+        border: 1px solid #334155;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .mapeo-item:hover {
+        background: #334155;
+        border-color: #3b82f6;
+      }
+
+      .mapeo-item.selected {
+        background: #334155;
+        border-color: #3b82f6;
+      }
+
+      .mapeo-info {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .mapeo-url {
+        font-size: 9px;
+        color: #94a3b8;
+        font-family: 'Courier New', monospace;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        margin-bottom: 3px;
+      }
+
+      .mapeo-letra-display {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 10px;
+      }
+
+      .mapeo-letra-label {
+        color: #94a3b8;
+        text-transform: uppercase;
+      }
+
+      .mapeo-letra-value {
+        color: #3b82f6;
+        font-weight: bold;
+        font-size: 14px;
+      }
+
+      .mapeos-editor {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        padding-top: 8px;
+        border-top: 1px solid #334155;
+      }
+
+      .editor-field {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .editor-field label {
+        font-size: 10px;
+        color: #94a3b8;
+        text-transform: uppercase;
+        font-weight: bold;
+      }
+
+      .editor-field input {
+        padding: 6px;
+        background: #1e293b;
+        color: #e2e8f0;
+        border: 1px solid #334155;
+        border-radius: 4px;
+        font-size: 10px;
+        font-family: 'Courier New', monospace;
+      }
+
+      .editor-field input:focus {
+        outline: none;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+      }
+
+      .editor-field input[readonly] {
+        background: #0f172a;
+        color: #94a3b8;
+      }
+
+      .editor-field input#letraMapeo {
+        border: 2px solid #3b82f6;
+        color: #3b82f6;
+        text-transform: uppercase;
+        text-align: center;
+        font-weight: bold;
+        font-size: 14px;
+      }
+
+      .mapeos-actions {
+        display: flex;
+        gap: 6px;
+        padding-top: 8px;
+        border-top: 1px solid #334155;
+      }
+
+      .mapeos-actions button {
+        flex: 1;
+        padding: 8px;
+        font-size: 10px;
+      }
+
+      #guardarMapeoBtn {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      }
+
+      #eliminarMapeoBtn {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+      }
+
+      .log-container {
+        display: none;
+      }
+
+      /* ===== NOMENCLATURA SECTION ===== */
+      .nomenclatura-section {
+        display: none;
+        padding: 12px;
+        background: #0f172a;
+        border-radius: 6px;
+        border: 1px solid #334155;
+        flex-direction: column;
+        gap: 10px;
+        max-height: 500px;
+      }
+
+      .nomenclatura-section.visible {
+        display: flex;
+      }
+
+      .nomenclatura-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid #334155;
+        padding-bottom: 8px;
+      }
+
+      .nomenclatura-header h3 {
+        color: #e2e8f0;
+        font-size: 12px;
+        margin: 0;
+      }
+
+      .nomenclatura-header button {
+        padding: 4px 8px;
+        font-size: 9px;
+        background: #334155;
+      }
+
+      .paneles-list {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        overflow-y: auto;
+        max-height: 200px;
+      }
+
+      .panel-item {
+        padding: 8px;
+        background: #1e293b;
+        border: 1px solid #334155;
+        border-radius: 4px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: all 0.2s;
+      }
+
+      .panel-item:hover {
+        background: #334155;
+        border-color: #8b5cf6;
+      }
+
+      .panel-info {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+      }
+
+      .panel-id {
+        font-size: 9px;
+        color: #94a3b8;
+        text-transform: uppercase;
+      }
+
+      .panel-nombre {
+        font-size: 11px;
+        color: #e2e8f0;
+        font-weight: bold;
+      }
+
+      .panel-actions {
+        display: flex;
+        gap: 4px;
+      }
+
+      .panel-actions button {
+        padding: 4px 8px;
+        font-size: 9px;
+        border-radius: 3px;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .edit-btn {
+        background: #3b82f6;
+      }
+
+      .edit-btn:hover {
+        background: #2563eb;
+      }
+
+      .delete-btn {
+        background: #ef4444;
+      }
+
+      .delete-btn:hover {
+        background: #dc2626;
+      }
+
+      .numeros-btn {
+        background: #10b981;
+      }
+
+      .numeros-btn:hover {
+        background: #059669;
+      }
+
+      .nomenclatura-form {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        padding: 10px;
+        background: #1e293b;
+        border: 1px solid #334155;
+        border-radius: 4px;
+      }
+
+      .form-field {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .form-field label {
+        font-size: 10px;
+        color: #94a3b8;
+        text-transform: uppercase;
+        font-weight: bold;
+      }
+
+      .form-field input {
+        padding: 6px;
+        background: #0f172a;
+        color: #e2e8f0;
+        border: 1px solid #334155;
+        border-radius: 4px;
+        font-size: 10px;
+      }
+
+      .form-field input:focus {
+        outline: none;
+        border-color: #8b5cf6;
+        box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.1);
+      }
+
+      .form-actions {
+        display: flex;
+        gap: 6px;
+        padding-top: 8px;
+      }
+
+      .form-actions button {
+        flex: 1;
+        padding: 8px;
+        font-size: 10px;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+
+      #agregarPanelBtn {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      }
+
+      #agregarPanelBtn:hover {
+        background: linear-gradient(135deg, #059669 0%, #047857 100%);
+      }
+
+      #cancelarFormBtn {
+        background: #334155;
+      }
+
+      #cancelarFormBtn:hover {
+        background: #475569;
+      }
+
+      .crear-panel-btn {
+        grid-column: 1 / -1;
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      }
+
+      .crear-panel-btn:hover {
+        background: linear-gradient(135deg, #059669 0%, #047857 100%);
+      }
+
+      .loading-spinner {
+        text-align: center;
+        color: #64748b;
+        font-size: 11px;
+        padding: 20px;
+      }
+
+      /* Botones en la nomenclatura */
+      #abrirFormPanelBtn {
+        width: 100%;
+        padding: 8px;
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      }
+
+      #abrirFormPanelBtn:hover {
+        background: linear-gradient(135deg, #059669 0%, #047857 100%);
+      }
+
+      /* Estilos para la sección de números */
+      .numeros-section {
+        padding: 12px;
+        background: #0f172a;
+        border-radius: 6px;
+        border: 1px solid #334155;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .numeros-section.visible {
+        display: flex !important;
+      }
+
+      .numeros-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-bottom: 8px;
+        border-bottom: 1px solid #334155;
+      }
+
+      .numeros-header h4 {
+        font-size: 12px;
+        color: #e2e8f0;
+        margin: 0;
+      }
+
+      .numeros-list {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        max-height: 200px;
+        overflow-y: auto;
+        margin-bottom: 10px;
+      }
+
+      .numero-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px;
+        background: #1e293b;
+        border: 1px solid #334155;
+        border-radius: 4px;
+        font-size: 10px;
+        color: #e2e8f0;
+      }
+
+      .numero-item:hover {
+        background: #334155;
+        border-color: #f97316;
+      }
+
+      .numero-valor {
+        flex: 1;
+        word-break: break-all;
+      }
+
+      .numero-delete {
+        background: #ef4444;
+        border: none;
+        color: white;
+        padding: 4px 8px;
+        border-radius: 3px;
+        cursor: pointer;
+        font-size: 9px;
+        margin-left: 6px;
+      }
+
+      .numero-delete:hover {
+        background: #dc2626;
+      }
+
+      .numeros-form {
+        display: flex;
+        gap: 6px;
+      }
+
+      .numeros-form input {
+        flex: 1;
+        padding: 8px;
+        background: #0f172a;
+        color: #e2e8f0;
+        border: 1px solid #334155;
+        border-radius: 4px;
+        font-size: 10px;
+      }
+
+      .numeros-form input:focus {
+        outline: none;
+        border-color: #10b981;
+        box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.1);
+      }
+
+      #agregarNumeroBtn {
+        padding: 8px 12px;
+        font-size: 10px;
+        border-radius: 4px;
+        cursor: pointer;
+        border: none;
+        color: white;
+      }
+
+      #agregarNumeroBtn:hover {
+        background: #059669 !important;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h2>Cyber AutoTager</h2>
+        <p>Control por pestaña independiente</p>
+      </div>
+      
+      <div class="controls">
+        <div id="pestanas-container" style="display: grid; grid-template-columns: 1fr; gap: 4px; width: 100%; overflow-y: auto; padding: 4px; background: transparent; border-radius: 0; border: none;">
+          <div style="grid-column: 1/-1; color: #94a3b8; text-align: center; padding: 20px 10px; font-size: 11px;">⏳ Buscando pestañas...</div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">
+          <button id="mapeoBtn">🔗 Mapeos</button>
+          <button id="nomenclaturaBtn">📋 Nomenclatura</button>
+        </div>
+        <button id="detenerTodasBtn">⏹️ Detener todas</button>
+      </div>
+
+      <div class="mapeos-section" id="mapeosSection">
+        <div class="mapeos-header">
+          <h3>🔗 EDIT Editar Mapeos</h3>
+          <button id="cerrarMapeoBtn">✕</button>
+        </div>
+
+        <div class="mapeos-list" id="mapeosList">
+          <div style="color: #64748b; text-align: center; padding: 20px 10px; font-size: 9px;">⏳ Loading...</div>
+        </div>
+
+        <div class="mapeos-editor">
+          <div class="editor-field">
+            <label>URL (Selecciona o Pega):</label>
+            <input type="text" id="urlOriginal" placeholder="Selecciona de la lista o pega una URL...">
+          </div>
+
+          <div class="editor-field">
+            <label>Letra:</label>
+            <input type="text" id="letraMapeo" maxlength="1" placeholder="A">
+          </div>
+
+          <div class="mapeos-actions">
+            <button id="guardarMapeoBtn">✅ OK Guardar</button>
+            <button id="eliminarMapeoBtn">���️ DEL Eliminar</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="nomenclatura-section" id="nomenclaturaSection">
+        <div class="nomenclatura-header">
+          <h3>📋 LIST Nomenclatura - Paneles</h3>
+          <div style="display: flex; gap: 4px;">
+            <button id="refrescarPanelesBtn" style="padding: 4px 8px; font-size: 9px; background: #334155; cursor: pointer;">🔄</button>
+            <button id="cerrarNomenclaturaBtn" style="padding: 4px 8px; font-size: 9px; background: #334155; cursor: pointer;">✕</button>
+          </div>
+        </div>
+
+        <div class="paneles-list" id="panelesList">
+          <div class="loading-spinner">⏳ Cargando paneles...</div>
+        </div>
+
+        <div class="nomenclatura-form" id="nomenclaturaForm" style="display: none;">
+          <div class="form-field">
+            <label>ID del Panel:</label>
+            <input type="number" id="idPanel" placeholder="Ej: 1, 2, 3..." min="1">
+          </div>
+          <div class="form-field">
+            <label>Nombre del Panel:</label>
+            <input type="text" id="nombrePanel" placeholder="Ej: Lisboa, Goatgaming...">
+          </div>
+          <div class="form-actions">
+            <button id="agregarPanelBtn">✅ OK Guardar</button>
+            <button id="cancelarFormBtn">❌ Cancelar</button>
+          </div>
+        </div>
+
+        <div class="numeros-section" id="numerosSection" style="display: none;">
+          <div class="numeros-header">
+            <h4>📱 Números de Teléfono - <span id="nombrePanelNumeros"></span></h4>
+            <button id="cerrarNumerosBtn" style="padding: 4px 8px; font-size: 9px; background: #334155; cursor: pointer;">✕</button>
+          </div>
+          <div class="numeros-list" id="numerosList"></div>
+          <div class="numeros-form">
+            <input type="text" id="nuevoNumero" placeholder="Ej: +34 123456789">
+            <button id="agregarNumeroBtn" style="background: #10b981;">➕ Agregar</button>
+          </div>
+        </div>
+
+        <button class="crear-panel-btn" id="abrirFormPanelBtn">➕ Crear Panel</button>
+      </div>
+      
+      <div class="log-container" id="logContainer"></div>
+    </div>
+
+    <script src="popup.js"></script>
+  </body>
+</html>

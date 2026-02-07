@@ -1,0 +1,29 @@
+═══════════════════════════════════════════════════════
+    🔄 INSTRUCCIONES DE ACTUALIZACIÓN RÁPIDA
+═══════════════════════════════════════════════════════
+
+¿HAY UNA NUEVA VERSIÓN?
+
+👉 HAZ DOBLE CLICK EN: ACTUALIZAR.bat
+
+Eso es todo. El sistema se actualizará solo.
+
+───────────────────────────────────────────────────────
+
+Después de actualizar:
+
+1. Abre Chrome
+2. Ve a: chrome://extensions/
+3. Busca "Clientify Auto Tagger"
+4. Click en el botón de RECARGAR (🔄)
+
+¡Listo! Ya tienes la última versión.
+
+═══════════════════════════════════════════════════════
+
+⚠️ IMPORTANTE:
+- NO borres la carpeta "codigo"
+- NO modifiques el archivo "manifest.json"
+- Si algo falla, contacta al equipo técnico
+
+═══════════════════════════════════════════════════════
