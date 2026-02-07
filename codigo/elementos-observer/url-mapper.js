@@ -22,42 +22,92 @@ const urlMapper = {
   cola: [],
   procesando: false,
   modalAbierto: false,
-  intervaloSonido: null, // Para controlar la repetición del sonido
-  cacheMapeos: {}, // Cache local de mapeos
-  ultimaConsultaAPI: 0, // Timestamp de la última consulta
-  CACHE_DURATION: 5 * 60 * 1000, // 5 minutos de cache
+  intervaloSonido: null,
+  cacheMapeos: {},
+  ultimaConsultaAPI: 0,
+  CACHE_DURATION: 5 * 60 * 1000,
+  urlEnEsperaDeRespuesta: {}, // {url: intervalId} para tracking de polling
   
   /**
    * Obtiene la letra de campaña para una URL
-   * Si no existe, la agrega a la cola para mapear
+   * Usa polling cada 3s si está pendiente de mapeo en el API
    * @param {string} url - URL del mensaje
-   * @param {string} panel - Nombre del panel asociado (opcional)
-   * @returns {string} Letra de campaña ('A', 'B', 'C', etc.) o null si está pendiente
+   * @param {string} panel - Nombre del panel asociado
+   * @returns {Promise<string>} Letra de campaña
    */
   async getLetraCampana(url, panel = null) {
-    // Primero intentar consultar esa URL específica al servidor
-    // Esto incrementa el contador de usos automáticamente
-    const letraDelServidor = await this.consultarMapeoEspecifico(url);
+    console.log(`🔍 [urlMapper] Buscando letra para: ${url}`);
     
+    // Si ya está en cache, retornar de una
+    if (this.cacheMapeos[url]) {
+      console.log(`✅ [urlMapper] En cache: ${url} → ${this.cacheMapeos[url]}`);
+      return this.cacheMapeos[url];
+    }
+    
+    // Consultar al servidor API
+    const letraDelServidor = await this.consultarMapeoEspecifico(url);
     if (letraDelServidor) {
-      console.log(`✅ URL encontrada en servidor: ${url} → Letra: ${letraDelServidor}`);
+      console.log(`✅ [urlMapper] En API: ${url} → ${letraDelServidor}`);
       return letraDelServidor;
     }
     
-    // Si no existe en servidor, agregar a la cola para mapear
+    // URL desconocida: agregar a cola y mostrar modal (solo primera vez)
     if (!this.cola.some(item => item.url === url)) {
       this.cola.push({ url, panel });
-      console.log(`📋 URL agregada a cola de mapeo: ${url} | Panel: ${panel || 'Sin panel'}`);
+      console.log(`📋 [urlMapper] URL desconocida agregada a cola: ${url}`);
     }
     
-    // Intentar procesar la cola si no se está procesando
-    if (!this.procesando && !this.modalAbierto) {
+    // Abrir modal si no hay uno abierto
+    if (!this.modalAbierto) {
       this.procesarCola();
+    } else {
+      console.log(`⏳ [urlMapper] Modal ya abierto - otras pestañas harán polling al API cada 3s`);
     }
     
-    return null; // Aún no tiene letra asignada
+    // POLLING: Esperar a que se carga la letra en el API (cada 3 segundos)
+    return this.esperarLetraPorPollingAPI(url, panel);
   },
   
+  /**
+   * Polling cada 3 segundos consultando el API hasta obtener la letra
+   * @param {string} url - URL a monitorear
+   * @param {string} panel - Panel asociado
+   * @returns {Promise<string>} La letra cuando esté disponible en el API
+   */
+  async esperarLetraPorPollingAPI(url, panel) {
+    return new Promise((resolve) => {
+      const maxIntentos = 300; // 300 * 3s = 15 minutos máximo
+      let intentos = 0;
+      
+      const interval = setInterval(async () => {
+        intentos++;
+        
+        console.log(`⏳ [urlMapper] Polling intento ${intentos}/${maxIntentos} (consultando API): ${url}`);
+        
+        // Consultar API cada 3 segundos
+        const letra = await this.consultarMapeoEspecifico(url);
+        
+        if (letra) {
+          console.log(`✅ [urlMapper] ¡Letra encontrada en API por polling! ${url} → ${letra}`);
+          clearInterval(interval);
+          delete this.urlEnEsperaDeRespuesta[url];
+          resolve(letra);
+          return;
+        }
+        
+        // Si llega al máximo de intentos, timeout
+        if (intentos >= maxIntentos) {
+          console.warn(`⚠️ [urlMapper] Timeout en polling después de 15 minutos: ${url}`);
+          clearInterval(interval);
+          delete this.urlEnEsperaDeRespuesta[url];
+          resolve(null); // Retornar null para que continúe sin letra
+          return;
+        }
+      }, 3000); // Polling cada 3 segundos
+      
+      this.urlEnEsperaDeRespuesta[url] = interval;
+    });
+  },
   /**
    * Consulta una URL específica al servidor e incrementa contador de usos
    * @param {string} url - URL a consultar
@@ -808,13 +858,13 @@ const urlMapper = {
       // 1. Actualizar cache local en memoria
       this.cacheMapeos[url] = letra;
       
-      // 2. Enviar al servidor de forma ASÍNCRONA (no bloquea)
+      // 2. Enviar al servidor API de forma ASÍNCRONA (no bloquea)
       this.sincronizarAlServidor(url, letra, panel);
       
       // 3. Notificar al popup
       sendPopupEvent('urlMapped', 'success', { url: url.substring(0, 40) + '...', letra });
       
-      console.log(`✅ Mapeado: ${url} → ${letra} (sincronizando con servidor)`);
+      console.log(`✅ Mapeado: ${url} → ${letra} (sincronizando con API)`);
     } catch (error) {
       console.error('❌ Error al guardar mapeo:', error);
     }
@@ -938,3 +988,5 @@ const urlMapper = {
     }
   }
 };
+
+console.log('✅ [urlMapper] Módulo cargado - Sistema de polling cada 3s para sincronizar mapeos desde API');
